@@ -1,5 +1,5 @@
 /*
- * Decompiled with CFR 0.152.
+ * Decopiled with CFR 0.152.
  * 
  * Could not load the following classes:
  *  net.minecraft.block.AirBlock
@@ -285,8 +285,12 @@ extends Module {
         if (PacketMine.nullCheck()) {
             return;
         }
-        if (this.breakPos != null && PacketMine.mc.world.isAir(this.breakPos)) {
-            complete = true;
+        if (this.breakPos != null && mc.world.isAir(this.breakPos)) {
+    this.breakPos = null;
+    this.startPacket = false;
+    ghost = false;
+    complete = false;
+    this.direction = null;
         }
         if (secondPos != null) {
             int secondSlot = this.getTool(secondPos);
@@ -462,8 +466,9 @@ extends Module {
 
 mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(slot));
 
-mc.interactionManager.attackBlock(pos, direction);
-
+mc.interactionManager.attackBlock(this.breakPos, direction);
+mc.interactionManager.updateBlockBreakingProgress(this.breakPos, direction);
+mc.player.swingHand(Hand.MAIN_HAND);
 mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(old));
                     } else {
                         PacketMine.mc.interactionManager.clickSlot(PacketMine.mc.player.currentScreenHandler.syncId, slot, old, SlotActionType.SWAP, (PlayerEntity)PacketMine.mc.player);
@@ -534,7 +539,7 @@ mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(old));
             if (this.swing.getValue()) {
                 EntityUtil.swingHand(Hand.MAIN_HAND, this.swingMode.getValue());
             }
-            if (this..getValue()) {
+           if (this.doubleBreak.getValue()) {
                 if (secondPos == null || this.isAir(secondPos)) {
                     double breakTime = this.getBreakTime(this.breakPos, slot, 1.0);
                     this.secondAnim.reset();
