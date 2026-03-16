@@ -458,7 +458,13 @@ extends Module {
                 }
                 if (shouldSwitch) {
                     if (this.hotBar.getValue()) {
-                        InventoryUtil.switchToSlot(slot);
+                        int old = mc.player.getInventory().selectedSlot;
+
+mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(slot));
+
+mc.interactionManager.attackBlock(pos, direction);
+
+mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(old));
                     } else {
                         PacketMine.mc.interactionManager.clickSlot(PacketMine.mc.player.currentScreenHandler.syncId, slot, old, SlotActionType.SWAP, (PlayerEntity)PacketMine.mc.player);
                     }
@@ -528,7 +534,7 @@ extends Module {
             if (this.swing.getValue()) {
                 EntityUtil.swingHand(Hand.MAIN_HAND, this.swingMode.getValue());
             }
-            if (this.doubleBreak.getValue()) {
+            if (this..getValue()) {
                 if (secondPos == null || this.isAir(secondPos)) {
                     double breakTime = this.getBreakTime(this.breakPos, slot, 1.0);
                     this.secondAnim.reset();
@@ -537,24 +543,59 @@ extends Module {
                     secondPos = this.breakPos;
                 }
                 this.doDoubleBreak(side);
-            }
-            PacketMine.sendSequencedPacket(id -> new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, this.breakPos, side, id));
-            if (this.rotate.getValue() && !this.shouldYawStep()) {
-                Frog.ROTATION.snapBack();
-            }
-            this.startTime.reset();
-        }
-    }
 
+PacketMine.sendSequencedPacket(id -> new PlayerActionC2SPacket(
+    PlayerActionC2SPacket.Action.START_DESTROY_BLOCK,
+    this.breakPos,
+    side,
+    id
+));
+
+PacketMine.sendSequencedPacket(id -> new PlayerActionC2SPacket(
+    PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK,
+    this.breakPos,
+    side,
+    id
+));
+
+if (this.rotate.getValue() && !this.shouldYawStep()) {
+    Frog.ROTATION.snapBack();
+}
+
+this.startTime.reset();
+    }
     private void breakBlock(BlockPos breakPos) {
         PacketMine.mc.world.getBlockState(breakPos).getBlock().onBreak((World)PacketMine.mc.world, breakPos, PacketMine.mc.world.getBlockState(breakPos), (PlayerEntity)PacketMine.mc.player);
     }
-
     void doDoubleBreak(Direction side) {
-        PacketMine.sendSequencedPacket(id -> new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, this.breakPos, side, id));
-        PacketMine.sendSequencedPacket(id -> new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.breakPos, side, id));
-    }
 
+    int pick = InventoryUtil.findClass(PickaxeItem.class);
+    int old = PacketMine.mc.player.getInventory().selectedSlot;
+
+    if (pick == -1) return;
+
+    PacketMine.mc.getNetworkHandler().sendPacket(
+        new UpdateSelectedSlotC2SPacket(pick)
+    );
+
+    PacketMine.sendSequencedPacket(id -> new PlayerActionC2SPacket(
+        PlayerActionC2SPacket.Action.START_DESTROY_BLOCK,
+        this.breakPos,
+        side,
+        id
+    ));
+
+    PacketMine.sendSequencedPacket(id -> new PlayerActionC2SPacket(
+        PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK,
+        this.breakPos,
+        side,
+        id
+    ));
+
+    PacketMine.mc.getNetworkHandler().sendPacket(
+        new UpdateSelectedSlotC2SPacket(old)
+    );
+}
     boolean placeCrystal() {
         int crystal = this.findCrystal();
         if (crystal != -1) {
